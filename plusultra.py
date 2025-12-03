@@ -6,7 +6,7 @@
 # - Log de avance tipo consola
 # - Timer total del lote
 # - Velocidad promedio por match (segundos desde API hasta JSON final)
-# - Soporte de múltiples API keys (round-robin, hasta 4)
+# - Soporte de múltiples API keys (round-robin, hasta 6)
 # - Misma lógica de cálculo que el script original (compute_from_fixture, etc.)
 
 import os
@@ -43,12 +43,13 @@ RANK_BUCKETS.setdefault("Other", 0.95)
 # ===================== MANEJO DE API KEYS =====================
 
 def _load_api_keys_from_env():
-    """Carga hasta 4 API keys desde variables de entorno."""
+    """Carga hasta 6 API keys desde variables de entorno."""
     keys = []
     single = (os.getenv("API_TENNIS_KEY") or "").strip()
     if single:
         keys.append(single)
-    for i in range(1, 5):
+    # Ahora hasta 6 adicionales: API_TENNIS_KEY_1..6
+    for i in range(1, 7):
         k = (os.getenv(f"API_TENNIS_KEY_{i}") or "").strip()
         if k and k not in keys:
             keys.append(k)
@@ -62,7 +63,7 @@ _API_IDX = 0
 def set_api_keys_from_string(s: str):
     """
     Permite escribir varias API keys separadas por coma/espacio/;.
-    Ej: "KEY1,KEY2,KEY3,KEY4"
+    Ej: "KEY1,KEY2,KEY3,KEY4,KEY5,KEY6"
     """
     global API_KEYS, _API_IDX
     parts = []
@@ -72,7 +73,8 @@ def set_api_keys_from_string(s: str):
             token = token.strip()
             if token:
                 parts.append(token)
-    parts = parts[:4]
+    # máximo 6 keys
+    parts = parts[:6]
     if parts:
         API_KEYS = parts
         _API_IDX = 0
@@ -148,8 +150,8 @@ def call_api(method: str, params: dict):
     if not api_key:
         raise RuntimeError(
             "No hay API keys configuradas.\n"
-            "Define API_TENNIS_KEY o API_TENNIS_KEY_1..4 en el entorno\n"
-            "o escribe 1–4 keys en el campo 'API Keys'."
+            "Define API_TENNIS_KEY o API_TENNIS_KEY_1..6 en el entorno\n"
+            "o escribe 1–6 keys en el campo 'API Keys'."
         )
 
     params["APIkey"] = api_key
@@ -767,7 +769,7 @@ st.title("🎾 Tennis AI+ — Momios sintéticos (api-tennis.com) · Batch por m
 
 st.markdown(
     """
-Escribe tus **API keys** de api-tennis (1–4, separadas por coma),
+Escribe tus **API keys** de api-tennis (1–6, separadas por coma),
 la superficie (opcional) y la lista de `match_key` (uno por línea o separados por coma).
 """
 )
@@ -777,7 +779,7 @@ with st.sidebar:
     st.header("🔑 API & Modelo")
 
     api_keys_input = st.text_input(
-        "API Keys (1–4, separadas por coma)",
+        "API Keys (1–6, separadas por coma)",
         value=",".join(API_KEYS) if API_KEYS else "",
         type="password",
     )
@@ -813,6 +815,7 @@ raw_keys = st.text_area(
     "Pega aquí los match_key (uno por línea o separados por espacios/comas):",
     height=160,
 )
+
 
 def parse_batch_keys(raw: str):
     parts = [p.strip() for p in raw.replace(",", " ").replace("\n", " ").split(" ") if p.strip()]
